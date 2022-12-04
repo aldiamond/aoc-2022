@@ -12,7 +12,7 @@ main :: IO ()
 main = hspec $ do
   describe "AoC Problem 1" $ do
     it "correctly parses the file" $ do
-      Day01.parseCalories testInput `shouldBe` testCal
+      Day01.parseCalories testInput `shouldBe` Right testCal
     it "determines the max total calories" $ do
       Day01.maxCalories testCal `shouldBe` (24000 :: Integer)
     it "determines the top two elf calories" $ do
