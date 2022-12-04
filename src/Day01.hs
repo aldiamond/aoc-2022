@@ -2,7 +2,7 @@
 
 module Day01 (solution, parseCalories, maxCalories, top) where
 
-import Data.List (sort)
+import Data.List (sort, sortBy)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO (readFile)
 import qualified Data.Text.Read as T
@@ -17,7 +17,7 @@ maxCalories :: [[Integer]] -> Integer
 maxCalories = foldl max (0 :: Integer) . map sum
 
 top :: Int -> [[Integer]] -> [Integer]
-top n = take n . reverse . sort . map sum
+top n = take n . sortBy (flip compare) . map sum
 
 solution :: IO ()
 solution = do
