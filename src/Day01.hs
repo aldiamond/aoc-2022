@@ -1,7 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Day01 (solution, parseCalories, maxCalories) where
+module Day01 (solution, parseCalories, maxCalories, top) where
 
+import Data.List (sort)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO (readFile)
 import qualified Data.Text.Read as T
@@ -15,9 +16,14 @@ parseCalories = fmap (fmap parseInt . T.lines) . T.splitOn (T.pack "\n\n")
 maxCalories :: [[Integer]] -> Integer
 maxCalories = foldl max (0 :: Integer) . map sum
 
+top :: Int -> [[Integer]] -> [Integer]
+top n = take n . reverse . sort . map sum
+
 solution :: IO ()
 solution = do
-  input <- TIO.readFile "Day01.input.txt"
-  let cals = parseCalories input
+  input <- TIO.readFile "data/day01.txt"
+  let calories = parseCalories input
   print "Day 01: Max Calories"
-  print $ maxCalories cals
+  print $ maxCalories calories
+  print "Day 01 (prt2): sum top 3 elf calories"
+  print $ sum . top 3 $ calories
