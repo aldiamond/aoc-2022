@@ -22,13 +22,13 @@ top n = take n . sortBy (flip compare) . map sum
 solution :: IO ()
 solution = do
   input <- TIO.readFile "data/day01.txt"
-  let calories = parseCalories input
-  case calories of
-    Right cals -> do
+  let maybeCalories = parseCalories input
+  case maybeCalories of
+    Right calories -> do
       print "Day 01: Max Calories"
-      print $ maxCalories cals
+      print $ maxCalories calories
       print "Day 01 (prt2): sum top 3 elf calories"
-      print $ sum . top 3 $ cals
+      print $ sum . top 3 $ calories
     Left err -> do
       print "Could not parse input"
       print err
