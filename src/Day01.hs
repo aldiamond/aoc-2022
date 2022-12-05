@@ -28,7 +28,7 @@ solution = do
       print "Day 01: Max Calories"
       print $ maxCalories calories
       print "Day 01 (prt2): sum top 3 elf calories"
-      print $ sum . top 3 $ calories
+      print $ sum $ top 3 calories
     Left err -> do
       print "Could not parse input"
       print err
