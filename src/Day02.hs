@@ -1,8 +1,9 @@
-{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Day02 (solution) where
 
+import Data.Map (keys, (!))
+import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO (readFile)
 import qualified Data.Text.Read as T
@@ -16,53 +17,64 @@ type Points = Int
 
 data Result = Win | Lose | Draw deriving (Show)
 
-data Shape = Rock | Scissors | Paper deriving (Show)
+data Shape = Rock | Paper | Scissors deriving (Show)
 
 class PointGenerator a where
   points :: a -> Points
 
 instance PointGenerator Shape where
-  points :: Shape -> Points
   points Rock = 1
   points Paper = 2
   points Scissors = 3
 
 instance PointGenerator Result where
-  points :: Result -> Points
   points Win = 6
   points Draw = 3
   points Lose = 0
 
-result :: Shape -> Shape -> Result
-result Rock Scissors = Win
-result Scissors Paper = Win
-result Paper Rock = Win
-result Paper Paper = Draw
-result Rock Rock = Draw
-result Scissors Scissors = Draw
-result _ _ = Lose
+class MatchResolver a where
+  resolve :: Shape -> a -> (Shape, Shape, Result)
+
+instance MatchResolver Shape where
+  resolve shape1 shape2 = (shape1, shape2, result)
+    where
+      result = case (shape1, shape2) of
+        (Rock, Scissors) -> Win
+        (Scissors, Paper) -> Win
+        (Paper, Rock) -> Win
+        (Paper, Paper) -> Draw
+        (Rock, Rock) -> Draw
+        (Scissors, Scissors) -> Draw
+        (shape1, shape2) -> Lose
+
+instance MatchResolver Result where
+  resolve shape1 result = (shape1, shape2, result)
+    where
+      shape2 = case (shape1, result) of
+        (Rock, Win) -> Scissors
+        (Scissors, Win) -> Paper
+        (Paper, Win) -> Rock
+        (Paper, Lose) -> Paper
+        (Rock, Lose) -> Rock
+        (Scissors, lose) -> Scissors
+        (shape1, Draw) -> shape1
 
 -- input parser
 
 type Parser = Parsec Void T.Text
 
-parseShape :: Char -> Char -> Char -> Parser Shape
-parseShape a b c = do
-  gesture <- char a <|> char b <|> char c
-  return $ toShape gesture
-  where
-    toShape gesture
-      | gesture == a = Rock
-      | gesture == b = Paper
-      | gesture == c = Scissors
+parseMatchToken :: Map.Map Char a -> Parser a
+parseMatchToken tokens = do
+  gesture <- choice $ map char $ keys tokens
+  return $ tokens ! gesture
 
-matchParser :: Parser [(Shape, Shape)]
-matchParser = gameParser `sepBy` eol
+matchParser :: Map.Map Char a -> Map.Map Char b -> Parser [(a, b)]
+matchParser p1Tokens p2Tokens = gameParser `sepBy` eol
   where
     gameParser = do
-      player1 <- parseShape 'A' 'B' 'C'
+      player1 <- parseMatchToken p1Tokens
       _ <- char ' '
-      player2 <- parseShape 'X' 'Y' 'Z'
+      player2 <- parseMatchToken p2Tokens
       return (player1, player2)
 
 -- solution
@@ -70,7 +82,9 @@ matchParser = gameParser `sepBy` eol
 solution :: IO ()
 solution = do
   input <- TIO.readFile "data/day02.txt"
-  let parseResult = parse matchParser "" input
+  let p1Tokens = Map.fromList [('A', Rock), ('B', Paper), ('C', Scissors)]
+  let p2Tokens = Map.fromList [('X', Rock), ('Y', Paper), ('Z', Scissors)]
+  let parseResult = parse (matchParser p1Tokens p2Tokens) "" input
   case parseResult of
     Right games -> do
       print "Games found"
