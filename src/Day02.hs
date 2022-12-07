@@ -24,8 +24,8 @@ class PointGenerator a where
 instance PointGenerator Shape where
   points :: Shape -> Points
   points Rock = 1
-  points Scissors = 2
-  points Paper = 3
+  points Paper = 2
+  points Scissors = 3
 
 instance PointGenerator Result where
   points :: Result -> Points
@@ -46,30 +46,26 @@ result _ _ = Lose
 
 type Parser = Parsec Void T.Text
 
-parsePlayerOne :: Parser Shape
-parsePlayerOne = do
-  gesture <- char 'A' <|> char 'B' <|> char 'C'
-  case gesture of
-    'A' -> return Rock
-    'B' -> return Scissors
-    'C' -> return Paper
-
-parsePlayerTwo :: Parser Shape
-parsePlayerTwo = do
-  gesture <- char 'X' <|> char 'Y' <|> char 'Z'
-  case gesture of
-    'X' -> return Rock
-    'Y' -> return Scissors
-    'Z' -> return Paper
+parseShape :: Char -> Char -> Char -> Parser Shape
+parseShape a b c = do
+  gesture <- char a <|> char b <|> char c
+  return $ toShape gesture
+  where
+    toShape gesture
+      | gesture == a = Rock
+      | gesture == b = Paper
+      | gesture == c = Scissors
 
 matchParser :: Parser [(Shape, Shape)]
 matchParser = gameParser `sepBy` eol
   where
     gameParser = do
-      player1 <- parsePlayerOne
+      player1 <- parseShape 'A' 'B' 'C'
       _ <- char ' '
-      player2 <- parsePlayerTwo
+      player2 <- parseShape 'X' 'Y' 'Z'
       return (player1, player2)
+
+-- solution
 
 solution :: IO ()
 solution = do
@@ -78,8 +74,9 @@ solution = do
   case parseResult of
     Right games -> do
       print "Games found"
-      print games
-      print $ map winner games
+      let point = map (\(p1, p2) -> (points p1 + points (result p1 p2), points p2 + points (result p2 p1))) games
+      print $ foldl (\(p1, p2) (p1', p2') -> (p1 + p1', p2 + p2')) (0, 0) point
+    -- print $ map winner games
     Left err -> do
       print "Could not parse input"
       print err
