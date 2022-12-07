@@ -1,3 +1,4 @@
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Day02 (solution) where
@@ -9,13 +10,41 @@ import Data.Void
 import Text.Megaparsec
 import Text.Megaparsec.Char
 
-type Parser = Parsec Void T.Text
+-- Rock, Scissors, Paper logic
 
 type Points = Int
 
-data Winner = Player1 | Player2 | Draw deriving (Show)
+data Result = Win | Lose | Draw deriving (Show)
 
 data Shape = Rock | Scissors | Paper deriving (Show)
+
+class PointGenerator a where
+  points :: a -> Points
+
+instance PointGenerator Shape where
+  points :: Shape -> Points
+  points Rock = 1
+  points Scissors = 2
+  points Paper = 3
+
+instance PointGenerator Result where
+  points :: Result -> Points
+  points Win = 6
+  points Draw = 3
+  points Lose = 0
+
+result :: Shape -> Shape -> Result
+result Rock Scissors = Win
+result Scissors Paper = Win
+result Paper Rock = Win
+result Paper Paper = Draw
+result Rock Rock = Draw
+result Scissors Scissors = Draw
+result _ _ = Lose
+
+-- input parser
+
+type Parser = Parsec Void T.Text
 
 parsePlayerOne :: Parser Shape
 parsePlayerOne = do
@@ -41,25 +70,6 @@ matchParser = gameParser `sepBy` eol
       _ <- char ' '
       player2 <- parsePlayerTwo
       return (player1, player2)
-
-winner :: (Shape, Shape) -> Winner
-winner shapes = case shapes of
-  (Rock, Scissors) -> Player1
-  (Scissors, Paper) -> Player1
-  (Paper, Rock) -> Player1
-  (Paper, Paper) -> Draw
-  (Rock, Rock) -> Draw
-  (Scissors, Scissors) -> Draw
-  (_, _) -> Player2
-
-shapePoint :: Shape -> Points
-shapePoint shape = case shape of
-  Rock -> 1
-  Scissors -> 2
-  Paper -> 3
-
-points :: (Shape, Shape) -> (Points, Points)
-points (shape1, shape2) = (shapePoint shape1, shapePoint shape2)
 
 solution :: IO ()
 solution = do
