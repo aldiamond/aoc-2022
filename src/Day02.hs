@@ -11,6 +11,9 @@ import Data.Void
 import Text.Megaparsec
 import Text.Megaparsec.Char
 
+inputFile :: String
+inputFile = "data/day02.txt"
+
 -- Rock, Scissors, Paper logic
 
 type Points = Int
@@ -18,6 +21,11 @@ type Points = Int
 data Result = Win | Lose | Draw deriving (Show)
 
 data Shape = Rock | Paper | Scissors deriving (Show)
+
+alt :: Result -> Result
+alt Win = Lose
+alt Draw = Draw
+alt Lose = Win
 
 class PointGenerator a where
   points :: a -> Points
@@ -54,21 +62,26 @@ instance MatchResolver Result where
         (Rock, Win) -> Scissors
         (Scissors, Win) -> Paper
         (Paper, Win) -> Rock
-        (Paper, Lose) -> Paper
-        (Rock, Lose) -> Rock
-        (Scissors, lose) -> Scissors
+        (Paper, Lose) -> Scissors
+        (Rock, Lose) -> Paper
+        (Scissors, Lose) -> Rock
         (shape1, Draw) -> shape1
 
 -- input parser
 
+type PlayerCode = Map.Map Char
+
+playerSubstitutions :: (MatchResolver a) => [(Char, a)] -> PlayerCode a
+playerSubstitutions = Map.fromList
+
 type Parser = Parsec Void T.Text
 
-parseMatchToken :: Map.Map Char a -> Parser a
+parseMatchToken :: PlayerCode a -> Parser a
 parseMatchToken tokens = do
   gesture <- choice $ map char $ keys tokens
   return $ tokens ! gesture
 
-matchParser :: Map.Map Char a -> Map.Map Char b -> Parser [(a, b)]
+matchParser :: PlayerCode a -> PlayerCode b -> Parser [(a, b)]
 matchParser p1Tokens p2Tokens = gameParser `sepBy` eol
   where
     gameParser = do
@@ -79,18 +92,41 @@ matchParser p1Tokens p2Tokens = gameParser `sepBy` eol
 
 -- solution
 
-solution :: IO ()
-solution = do
-  input <- TIO.readFile "data/day02.txt"
-  let p1Tokens = Map.fromList [('A', Rock), ('B', Paper), ('C', Scissors)]
-  let p2Tokens = Map.fromList [('X', Rock), ('Y', Paper), ('Z', Scissors)]
-  let parseResult = parse (matchParser p1Tokens p2Tokens) "" input
+tallyWinner :: (MatchResolver a) => PlayerCode Shape -> PlayerCode a -> IO (Points, Points)
+tallyWinner player1Code player2Code = do
+  input <- TIO.readFile inputFile
+  let parseResult = parse (matchParser player1Code player2Code) "" input
   case parseResult of
     Right games -> do
-      print "Games found"
-      let point = map (\(p1, p2) -> (points p1 + points (result p1 p2), points p2 + points (result p2 p1))) games
-      print $ foldl (\(p1, p2) (p1', p2') -> (p1 + p1', p2 + p2')) (0, 0) point
-    -- print $ map winner games
+      let matchResults = map (uncurry resolve) games
+      let matchPoints = map (\(shape1, shape2, res) -> (points shape1 + points res, points shape2 + points (alt res))) matchResults
+      let totalPoints = zipSum matchPoints
+      return totalPoints
     Left err -> do
       print "Could not parse input"
-      print err
+      print $ show err
+      return (0, 0)
+
+solution :: IO ()
+solution = do
+  print "========================================"
+  print "Part 01"
+  resPrt1 <-
+    tallyWinner
+      (playerSubstitutions [('A', Rock), ('B', Paper), ('C', Scissors)])
+      (playerSubstitutions [('X', Rock), ('Y', Paper), ('Z', Scissors)])
+  print "Total Points"
+  print resPrt1
+  print "========================================"
+  print "Part 02"
+  resPrt2 <-
+    tallyWinner
+      (playerSubstitutions [('A', Rock), ('B', Paper), ('C', Scissors)])
+      (playerSubstitutions [('X', Win), ('Y', Draw), ('Z', Lose)])
+  print "Total Points"
+  print resPrt2
+
+-- helpers
+
+zipSum :: (Num a, Num b) => [(a, b)] -> (a, b)
+zipSum xs = (sum (map fst xs), sum (map snd xs))
